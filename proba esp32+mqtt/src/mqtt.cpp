@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <cstring>
 
 #include "config.h"
 #include "mqtt.h"
@@ -12,13 +13,39 @@ PubSubClient client(espClient);
 unsigned long lastPublish = 0;
 int contador = 0;
 
-// Chamado cada vez que chega un mensaxe a un topic subscrito
-void onMessage(char* topic, byte* payload, unsigned int length) {
-  Serial.printf("[MQTT] Recibido en '%s': ", topic);
+// O payload chega como bytes; convertémolo a texto e normalizámolo
+String payloadToString(byte* payload, unsigned int length) {
+  String texto;
+  texto.reserve(length);
   for (unsigned int i = 0; i < length; i++) {
-    Serial.write(payload[i]);
+    texto += (char)payload[i];
   }
-  Serial.println();
+  texto.trim();
+  texto.toLowerCase();
+  return texto;
+}
+
+void setLed(bool encendido) {
+  digitalWrite(LED_PIN, encendido ? HIGH : LOW);
+}
+
+// Chamado cada vez que chega un mensaxe a algún topic subscrito
+void onMessage(char* topic, byte* payload, unsigned int length) {
+  String comando = payloadToString(payload, length);
+
+  Serial.printf("[MQTT] Recibido en '%s': %s\n", topic, comando.c_str());
+
+  if (strcmp(topic, MQTT_TOPIC_LED) == 0) {
+    if (comando == "on") {
+      setLed(true);
+      Serial.println("[MQTT] LED integrado ON");
+    } else if (comando == "off") {
+      setLed(false);
+      Serial.println("[MQTT] LED integrado OFF");
+    } else {
+      Serial.println("[MQTT] Comando non recoñecido (usa 'on' ou 'off')");
+    }
+  }
 }
 
 // ID único por placa, baseado na MAC, para non colidir con outros clientes
@@ -32,8 +59,9 @@ void reconnect() {
 
     if (client.connect(clientId().c_str())) {
       Serial.println("OK");
-      client.subscribe(MQTT_TOPIC_SUB);
-      Serial.printf("[MQTT] Subscrito a '%s'\n", MQTT_TOPIC_SUB);
+
+      client.subscribe(MQTT_TOPIC_LED);
+      Serial.printf("[MQTT] Subscrito a '%s'\n", MQTT_TOPIC_LED);
     } else {
       Serial.printf("fallou (code %d). Reintentando en 5 s...\n", client.state());
       delay(5000);
@@ -44,9 +72,11 @@ void reconnect() {
 } // namespace
 
 void mqtt::begin() {
+
   client.setServer(MQTT_HOST, MQTT_PORT);
   client.setCallback(onMessage);
   lastPublish = millis();
+
   Serial.printf("[MQTT] Configurado: %s:%d\n", MQTT_HOST, MQTT_PORT);
 }
 
@@ -59,7 +89,7 @@ void mqtt::loop() {
   if (millis() - lastPublish >= PUBLISH_INTERVAL_MS) {
     lastPublish = millis();
 
-    String payload = "ola_mundo_" + String(contador++);
+    String payload = "ValorProba:" + String(contador++);
     if (client.publish(MQTT_TOPIC_PUB, payload.c_str())) {
       Serial.printf("[MQTT] Publicado en '%s': %s\n", MQTT_TOPIC_PUB, payload.c_str());
     } else {

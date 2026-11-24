@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include "secrets.h"
 #include "mqtt.h"
+#include "config.h"
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
@@ -30,7 +31,8 @@ void setup() {
   // Espera breve polo USB CDC sen bloquear se non hai monitor aberto
   unsigned long t0 = millis();
   while (!Serial && millis() - t0 < 2000) delay(10);
-
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
   connectWiFi();
   mqtt::begin();
 }
