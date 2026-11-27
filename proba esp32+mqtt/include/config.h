@@ -17,4 +17,8 @@
 // Cadenda de publicación: 1 minuto
 #define PUBLISH_INTERVAL_MS 60000UL
 
+//Configuración pin e tipo de sensor de temperatura e humidade
+#define DHT_PIN D14
+#define DHT_TYPE DHT11
+
 #endif // CONFIG_H

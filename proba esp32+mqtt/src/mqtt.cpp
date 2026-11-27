@@ -4,6 +4,7 @@
 
 #include "config.h"
 #include "mqtt.h"
+#include "sensors.h"
 
 namespace {
 
@@ -11,7 +12,6 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 unsigned long lastPublish = 0;
-int contador = 0;
 
 // O payload chega como bytes; convertémolo a texto e normalizámolo
 String payloadToString(byte* payload, unsigned int length) {
@@ -89,7 +89,7 @@ void mqtt::loop() {
   if (millis() - lastPublish >= PUBLISH_INTERVAL_MS) {
     lastPublish = millis();
 
-    String payload = "ValorProba:" + String(contador++);
+    String payload = "Temperatura:" + String(temperatura, 1) + ";Humidade" + String(humidade, 1);
     if (client.publish(MQTT_TOPIC_PUB, payload.c_str())) {
       Serial.printf("[MQTT] Publicado en '%s': %s\n", MQTT_TOPIC_PUB, payload.c_str());
     } else {

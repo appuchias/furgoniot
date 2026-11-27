@@ -1,7 +1,16 @@
 #include <WiFi.h>
+#include <DHT.h>
+
 #include "secrets.h"
 #include "mqtt.h"
 #include "config.h"
+#include "sensors.h"
+
+
+unsigned long lastReading = 0;
+float temperatura = 0.0;
+float humidade = 0.0;
+DHT dht(DHT_PIN, DHT_TYPE);
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
@@ -26,22 +35,38 @@ void connectWiFi() {
 void setup() {
   Serial.begin(115200);
 
-  // Espera breve polo USB CDC sen bloquear se non hai monitor aberto
   unsigned long t0 = millis();
   while (!Serial && millis() - t0 < 2000) delay(10);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
+  dht.begin();
   connectWiFi();
   mqtt::begin();
 }
 
 void loop() {
-  // Sen rede non ten sentido intentar MQTT
   if (WiFi.status() != WL_CONNECTED) {
     connectWiFi();
     return;
   }
 
-  // Aquí delegamos toda a lóxica MQTT ao outro ficheiro
+  // Ler o sensor cada 2 segundos (mínimo que pide o DHT11)
+  if (millis() - lastReading >= 2000) {
+    lastReading = millis();
+    humidade = dht.readHumidity();
+    temperatura = dht.readTemperature();
+
+    if (isnan(humidade) || isnan(temperatura)) {
+      Serial.println("Erro lendo o DHT11");
+      return;
+    }
+
+    Serial.print("Temp: ");
+    Serial.print(temperatura);
+    Serial.print(" °C  Hum: ");
+    Serial.print(humidade);
+    Serial.println(" %");
+  }
+
   mqtt::loop();
-}
+}   
