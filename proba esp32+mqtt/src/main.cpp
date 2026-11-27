@@ -3,11 +3,7 @@
 #include "mqtt.h"
 #include "config.h"
 
-void connectWiFi() {
-  if (WiFi.status() == WL_CONNECTED) return;
-
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+const int ledPin = 21;  // LED integrado (D13)
 
   Serial.print("Conectando a WiFi");
   unsigned long inicio = millis();
